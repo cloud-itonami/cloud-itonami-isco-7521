@@ -1,5 +1,5 @@
 (ns woodtreatcoord.actor-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [woodtreatcoord.actor :as actor]
             [woodtreatcoord.store :as store]))
 
