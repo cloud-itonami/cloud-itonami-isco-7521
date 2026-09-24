@@ -1,0 +1,44 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:physics` runs it.
+;;
+;; README "Robotics premise": a treatment-facility scheduling/logistics
+;; coordination robot handles crew scheduling, batch/inventory records and
+;; preservative-chemicals/timber-stock supply orders for a wood-treatment
+;; crew (ISCO 7521). Its physical work: towing timber packs on the bogie into
+;; the treatment cylinder, draining preservative from the cylinder back to
+;; the work tank, and heat treatment of timber in the kiln.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isco-7521"
+ :cases
+ [{:id :timber-pack-into-cylinder
+   :kind :transport
+   :procedure "tug tows a bogie with a timber pack along the rails into the treatment cylinder"
+   :params {:mass-kg 800.0 :distance-m 25.0 :v-max-mps 0.5 :a-max-mps2 0.2
+            :brake-decel-mps2 0.3 :drive-force-n 2500.0 :crr 0.005
+            :cog-height-m 0.30 :support-half-length-m 0.60 :payload-cog-height-m 0.90
+            :max-time-s 1800.0}
+   :sweep {:param :payload-kg :values [1000.0 2500.0 5000.0 10000.0 15000.0]}
+   :quantity :cycle-time-s
+   :limit {:max 70.0 :basis "estimate: charge the cylinder within the loading slot of the treatment cycle; crr 0.005 assumes steel wheels on rail"}
+   :boundary {:lo 200.0 :hi 40000.0}}
+  {:id :cylinder-drain-back
+   :kind :tank-drain
+   :procedure "preservative drains from the treatment cylinder (approximated as 4 m2 plan area, 1.8 m liquid depth) back to the work tank after the pressure period"
+   :params {:tank-area-m2 4.0 :h0-m 1.8 :h-target-m 0.05 :cd 0.62 :q-in-m3s 0.0}
+   :sweep {:param :orifice-area-m2 :values [0.005 0.01 0.02 0.03 0.05]}
+   :quantity :time-to-target-s
+   :limit {:max 1200.0 :basis "estimate: drain-back inside 20 minutes of the cycle; the horizontal cylinder's varying cross-section is approximated by a constant area"}
+   :boundary {:lo 0.001 :hi 0.1}}
+  {:id :heat-treatment-core
+   :kind :thermal
+   :procedure "pine boards in the 70 C heat-treatment kiln until the core (insulated symmetry plane) reaches 56 C, after which the ISPM 15 hold can start"
+   :params {:thickness-m 0.025 :conductivity-w-mk 0.12 :density-kg-m3 500.0 :specific-heat-j-kgk 1700.0
+            :t0-c 10.0 :t-hot-c 70.0 :h-front-w-m2k 20.0 :h-back-w-m2k 0.0 :t-back-ambient-c 70.0
+            :threshold-c 56.0 :duration-s 43200.0 :nodes 11}
+   :sweep {:param :thickness-m :values [0.01 0.019 0.025 0.035 0.05]}
+   :quantity :time-to-threshold-s
+   :limit {:max 14400.0 :basis "estimate: four-hour heat-up budget of the kiln schedule before the hold; the 56 C core threshold is the ISPM 15 heat-treatment core temperature (held 30 min)"}
+   :boundary {:lo 0.005 :hi 0.08}}]}
